@@ -1,0 +1,5 @@
+description: Smart space - sends space normally, mouse L/R click when mouse mode is on
+
+compatible: "cyberfly,behavior-smart-space"
+
+include: one_param.yaml

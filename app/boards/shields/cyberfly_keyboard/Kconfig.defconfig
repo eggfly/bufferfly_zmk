@@ -14,4 +14,11 @@ config CYBERFLY_MOUSE_TEST
     default n
     depends on ZMK_POINTING
 
+config CYBERFLY_AIR_MOUSE
+    bool "Air mouse via QMI8658A IMU tilt-to-cursor"
+    default n
+    depends on ZMK_POINTING
+    select SENSOR
+    select QMI8658A
+
 endif

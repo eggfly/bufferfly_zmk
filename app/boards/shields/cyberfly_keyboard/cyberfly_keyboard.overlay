@@ -21,6 +21,10 @@
             compatible = "cyberfly,behavior-toggle-mouse";
             #binding-cells = <0>;
         };
+        smart_space: smart_space {
+            compatible = "cyberfly,behavior-smart-space";
+            #binding-cells = <1>;
+        };
     };
 
     backlight: pwmleds {

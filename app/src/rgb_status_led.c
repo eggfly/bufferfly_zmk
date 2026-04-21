@@ -4,7 +4,7 @@
  * Boot: R->G->B sequential flash then off.
  * USB connected: continuous RGB cycle.
  * Battery only: brief blue double-blink every 5 seconds.
- * Mouse layer on: green double-blink then resume previous mode.
+ * Mouse mode: OFF=red, M1=green, M2=blue double-blink then resume.
  *
  * PWM1 channels: 0=Red(P0.14), 1=Green(P0.16), 2=Blue(P0.19)
  */
@@ -19,6 +19,7 @@
 #include <zmk/usb.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/usb_conn_state_changed.h>
+#include <cyberfly/mouse_mode.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
@@ -57,6 +58,7 @@ enum rgb_mode {
 static enum rgb_mode current_mode = RGB_MODE_BOOT;
 static uint8_t cycle_phase = 0;
 static bool usb_connected = false;
+static uint8_t mouse_flash_r, mouse_flash_g, mouse_flash_b;
 
 /* Work items */
 static void rgb_work_handler(struct k_work *work);
@@ -146,9 +148,9 @@ static void rgb_work_handler(struct k_work *work) {
 
     case RGB_MODE_MOUSE_FLASH:
         switch (cycle_phase) {
-        case 0: rgb_set(0, RGB_BRT, 0); break;
+        case 0: rgb_set(mouse_flash_r, mouse_flash_g, mouse_flash_b); break;
         case 1: rgb_off(); break;
-        case 2: rgb_set(0, RGB_BRT, 0); break;
+        case 2: rgb_set(mouse_flash_r, mouse_flash_g, mouse_flash_b); break;
         case 3: rgb_off(); break;
         case 4:
             resume_normal_mode();
@@ -185,12 +187,26 @@ static int rgb_status_event_listener(const zmk_event_t *eh) {
 ZMK_LISTENER(rgb_status_led, rgb_status_event_listener);
 ZMK_SUBSCRIPTION(rgb_status_led, zmk_usb_conn_state_changed);
 
-void cyberfly_rgb_flash_mouse_toggle(void) {
-    if (current_mode != RGB_MODE_BOOT) {
-        current_mode = RGB_MODE_MOUSE_FLASH;
-        cycle_phase = 0;
-        k_work_reschedule(&rgb_work, K_NO_WAIT);
+void cyberfly_rgb_flash_mouse_mode(enum cyberfly_mouse_mode mode) {
+    if (current_mode == RGB_MODE_BOOT) return;
+
+    switch (mode) {
+    case CYBERFLY_MOUSE_OFF:
+        mouse_flash_r = RGB_BRT; mouse_flash_g = 0; mouse_flash_b = 0;
+        break;
+    case CYBERFLY_MOUSE_M1:
+        mouse_flash_r = 0; mouse_flash_g = RGB_BRT; mouse_flash_b = 0;
+        break;
+    case CYBERFLY_MOUSE_M2:
+        mouse_flash_r = 0; mouse_flash_g = 0; mouse_flash_b = RGB_BRT;
+        break;
+    default:
+        return;
     }
+
+    current_mode = RGB_MODE_MOUSE_FLASH;
+    cycle_phase = 0;
+    k_work_reschedule(&rgb_work, K_NO_WAIT);
 }
 
 /* Initialization */
