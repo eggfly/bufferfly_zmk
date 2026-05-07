@@ -1,0 +1,48 @@
+name: Build Manual PDF
+
+on:
+  push:
+    paths:
+      - "MANUAL.md"
+      - "images/**"
+      - ".github/workflows/build-manual-pdf.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc fonts-noto-cjk fonts-noto-color-emoji weasyprint
+
+      - name: Convert MD to PDF
+        run: |
+          pandoc MANUAL.md \
+            --from=gfm \
+            --to=html5 \
+            --pdf-engine=weasyprint \
+            --css=.github/manual-style.css \
+            --metadata title="CyberFly 键盘使用说明书" \
+            -o CyberFly_Manual.pdf
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CyberFly-Manual-PDF
+          path: CyberFly_Manual.pdf
+
+      - name: Commit PDF to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f CyberFly_Manual.pdf
+          git diff --cached --quiet || git commit -m "docs: auto-generate Manual PDF [skip ci]"
+          git push
